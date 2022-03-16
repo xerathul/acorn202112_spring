@@ -12,6 +12,7 @@ import com.gura.spring03.cafe.dao.CafeCommentDao;
 import com.gura.spring03.cafe.dao.CafeDao;
 import com.gura.spring03.cafe.dto.CafeCommentDto;
 import com.gura.spring03.cafe.dto.CafeDto;
+import com.gura.spring03.exception.NotDeleteException;
 
 @Service
 public class CafeServiceImpl implements CafeService{
@@ -196,14 +197,22 @@ public class CafeServiceImpl implements CafeService{
 
 	@Override
 	public void updateContent(CafeDto dto) {
-		// TODO Auto-generated method stub
-		
+		cafeDao.update(dto);
 	}
 
 	@Override
 	public void deleteContent(int num, HttpServletRequest request) {
-		// TODO Auto-generated method stub
-		
+		//세션에서 로그인된 아이디를 읽어와서
+		String id=(String)request.getSession().getAttribute("id");
+		//삭제할 글의 작성자
+		String writer=cafeDao.getData(num).getWriter();
+		//만일 글의 작성자가 로그인된 아이디와 다르다면 
+		if(!writer.equals(id)) {
+			//예외를 발생시켜서 응답을 예외 Controller 에서 하도록 한다.
+			throw new NotDeleteException("남의 파일 지우기 없기!");
+		}
+		//본인이 작성한 글이 아니면 아래의 코드가 실행이 안되야 된다. 
+		cafeDao.delete(num);
 	}
 
 	@Override
@@ -244,14 +253,21 @@ public class CafeServiceImpl implements CafeService{
 
 	@Override
 	public void deleteComment(HttpServletRequest request) {
-		// TODO Auto-generated method stub
+		int num=Integer.parseInt(request.getParameter("num"));
+		//삭제할 댓글 정보를 읽어와서 
+		CafeCommentDto dto=cafeCommentDao.getData(num);
+		String id=(String)request.getSession().getAttribute("id");
+		//글 작성자와 로그인된 아이디와 일치하지 않으면
+		if(!dto.getWriter().equals(id)) {
+			throw new NotDeleteException("남의 댓글 지우면 혼난당!");
+		}
 		
+		cafeCommentDao.delete(num);
 	}
 
 	@Override
 	public void updateComment(CafeCommentDto dto) {
-		// TODO Auto-generated method stub
-		
+		cafeCommentDao.update(dto);
 	}
 
 	@Override
@@ -291,6 +307,16 @@ public class CafeServiceImpl implements CafeService{
 		request.setAttribute("commentList", commentList);
 		request.setAttribute("num", num); //원글의 글번호
 		request.setAttribute("pageNum", pageNum); //댓글의 페이지 번호
+	}
+
+	@Override
+	public void getData(HttpServletRequest request) {
+		//수정할 글번호
+		int num=Integer.parseInt(request.getParameter("num"));
+		//수정할 글의 정보 얻어와서 
+		CafeDto dto=cafeDao.getData(num);
+		//request 에 담아준다.
+		request.setAttribute("dto", dto);
 	}
 
 }
